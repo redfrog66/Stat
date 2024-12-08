@@ -1,0 +1,146 @@
+---
+title: "beadando"
+output: html_document
+date: "2024-12-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Beadandó 
+
+Az adattudomány statisztikai alapjai tárgy, 2024/25/1 félév
+2024.12.04
+Gellén Rebeka
+
+### Adat beolvasása
+Olyan adatbázissal dolgozunk, ahol Spotify-on megtalálható zenék adatai szerepelnek.
+```{r}
+data <- read.csv("spotify.csv")
+head(data)
+```
+## PCA
+## Numerikus oszlopok kiválasztása
+
+```{r}
+num_data <- data[, c("danceability", "energy", "valence", "tempo", "loudness")]
+head(num_data)
+
+```
+```{r}
+pca_model <- prcomp(num_data, scale = TRUE)
+summary(pca_model)
+```
+```{r}
+pca_model$rotation
+
+```
+## Screeplot
+```{r}
+screeplot(pca_model, main = "Screeplot", col = "pink")
+```
+```{r}
+# Biplot készítése
+biplot(pca_model, main = "PCA Biplot", col = "pink")
+
+```
+
+
+```{r}
+library(ggplot2)
+pca_data <- as.data.frame(pca_model$x)
+ggplot(pca_data, aes(PC1, PC2)) +
+  geom_point() +
+  theme_minimal() +
+  labs(title = "PCA ábra", x = "Főkomponens 1", y = "Főkomponens 2")
+
+```
+Az ábra a főkomponens-analízis (PCA) eredményeit mutatja, ahol az első két főkomponens (PC1 és PC2) a teljes változékonyság legnagyobb részét magyarázza. Az adatpontok elhelyezkedése az eredeti változók közötti mintázatok és különbségek vizualizálását segíti elő.
+Az első két főkomponens szerint az adatok jelentős része hasonló mintázatot követ.
+
+## MDS 
+```{r}
+# egy véletlenszerű minta az adatból
+set.seed(123)
+sample_data <- num_data[sample(nrow(num_data), 1000), ]
+dist_matrix <- dist(sample_data)
+mds_model <- cmdscale(dist_matrix, k = 2)
+```
+### MDS eredmények ábrázolása
+```{r}
+mds_data <- as.data.frame(mds_model)
+colnames(mds_data) <- c("MDS1", "MDS2")
+```
+```{r}
+ggplot(mds_data, aes(MDS1, MDS2)) +
+  geom_point() +
+  theme_minimal() +
+  labs(title = "MDS ábra", x = "MDS1", y = "MDS2")
+```
+Az ábra jól mutatja, hogy a random választott 100 adatban többféle zenét sikerült kiválasztani, így nem lehet egyértelmű csoportokat elkülöníteni. 
+
+## K-means klaszterezés és MDS
+```{r}
+# Véletlenszerű minta választása az adatból
+set.seed(123)
+sample_data <- num_data[sample(nrow(num_data), 1000), ]
+```
+### MDS
+```{r}
+# Távolsági mátrix kiszámítása a minta alapján
+dist_matrix <- dist(sample_data)
+
+# MDS futtatása
+mds_model <- cmdscale(dist_matrix, k = 2)
+```
+### Klaszterezés
+```{r}
+kmeans_model <- kmeans(sample_data, centers = 3)
+```
+
+### Klaszerezés és MDS egyesítése
+```{r}
+mds_data <- as.data.frame(mds_model)
+mds_data$cluster <- as.factor(kmeans_model$cluster)
+```
+### Vizualizáció
+```{r}
+ggplot(mds_data, aes(V1, V2, color = cluster)) +
+  geom_point() +
+  theme_minimal() +
+  labs(title = "MDS és K-means Klaszterek", x = "MDS1", y = "MDS2")
+```
+Az adatok három jól elkülönülő csoportba rendeződnek. A klaszterek szoros elhelyezkedése arra utal, hogy a hozzájuk tartozó zeneszámok hasonló jellemzőkkel bírnak.
+
+## MSD 3D-ben
+```{r}
+# Véletlenszerű minta (1000 adatpont) kiválasztása
+set.seed(123)
+sample_data <- num_data[sample(nrow(num_data), 1000), ]
+
+# Távolságmátrix kiszámítása
+dist_matrix <- dist(sample_data)
+
+# MDS alkalmazása
+mds_model <- cmdscale(dist_matrix, k = 3)  # 3D MDS
+```
+### Ábrázolás
+```{r}
+mds_data_3d <- as.data.frame(mds_model)
+mds_data_3d$cluster <- as.factor(kmeans_model$cluster)  # Klaszterek hozzárendelése
+```
+### 3D ábra
+```{r}
+library(plotly)
+plot_ly(mds_data_3d, x = ~V1, y = ~V2, z = ~V3, color = ~cluster, type = "scatter3d", mode = "markers") %>%
+  layout(title = "3D MDS és K-means Klaszterek", 
+         scene = list(xaxis = list(title = 'MDS1'),
+                      yaxis = list(title = 'MDS2'),
+                      zaxis = list(title = 'MDS3')))
+```
+
+
+
+
+
